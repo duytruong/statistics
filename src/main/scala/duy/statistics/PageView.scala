@@ -16,17 +16,17 @@ import redis.clients.jedis.Jedis
 object PageView {
 
   def main(args: Array[String]): Unit = {
-    val PAGEVIEW_SCHEMA = "{\"fields\":[{\"name\":\"metric\",\"type\":\"string\"},{\"name\":\"uuid\",\"type\":\"string\"},{\"name\":\"location\",\"type\":\"string\"},{\"name\":\"referrer\",\"type\":\"string\"},{\"name\":\"url\",\"type\":\"string\"},{\"name\":\"product\",\"type\":\"string\"},{\"name\":\"video\",\"type\":\"string\"},{\"name\":\"viewer\",\"type\":\"int\"},{\"name\":\"ts\",\"type\":\"long\"}],\"name\":\"pageviewevent\",\"type\":\"record\"}";
     val duration = args(0).toInt
     val conf = new SparkConf().setAppName("pageview-consumer")
     val ssc = new StreamingContext(conf, Seconds(duration))
     val kafkaParams = Map[String, String]("metadata.broker.list" -> "localhost:9092")
     val topicSet = Set("pageview")
     lazy val parser = new Schema.Parser()
-    lazy val schema = parser.parse(PAGEVIEW_SCHEMA)
+    lazy val schema = parser.parse(getClass.getResourceAsStream("/pageview.avsc"))
     lazy val recordInjection = GenericAvroCodecs.toBinary(schema)
 
-    val directKafkaStream = KafkaUtils.createDirectStream[String, Array[Byte], StringDecoder, DefaultDecoder](ssc, kafkaParams, topicSet)
+    val directKafkaStream = KafkaUtils
+      .createDirectStream[String, Array[Byte], StringDecoder, DefaultDecoder](ssc, kafkaParams, topicSet)
 
     directKafkaStream
       .foreachRDD(rdd => rdd.foreachPartition(iter => {
